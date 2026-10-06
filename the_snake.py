@@ -2,7 +2,6 @@ from random import choice, randrange
 
 import pygame
 
-
 # Константы для размеров поля и сетки:
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
@@ -66,7 +65,6 @@ pygame.display.set_caption('Змейка')
 clock = pygame.time.Clock()
 
 
-# Тут опишите все классы игры.
 class GameObject:
     """Базовый класс для всех игровых объектов."""
 
@@ -76,9 +74,9 @@ class GameObject:
 
     def draw(self):
         """Метод для отрисовки объекта на игровом поле."""
-        raise NotImplementedError(  # Заменил pass на RaiseImplementedError
-            "Метод draw() должен "  # По подсказке ИИ
-            "быть реализован в подклассе."
+        raise NotImplementedError(
+            'Метод draw() должен '
+            'быть реализован в подклассе.'
         )
 
 
@@ -119,7 +117,7 @@ class Stub(Apple):
                          border_color=stub_border_color, occupied=occupied)
 
 
-class Walls(GameObject):  # Этот класс я генерировал с ИИ
+class Walls(GameObject):
     """Стены: класс для управления стенами и их отрисовки."""
 
     def __init__(self, color=WALL_COLOR):
@@ -131,16 +129,13 @@ class Walls(GameObject):  # Этот класс я генерировал с И�
         self.positions = []
         walls_made = 0
         while walls_made < WALL_COUNT:
-            # Случайная начальная клетка (в клетках сетки, не в пикселях)
             x = randrange(GRID_WIDTH)
             y = randrange(GRID_HEIGHT)
-            # Случайно выбираем: стена горизонтальная или вертикальная
             if randrange(2) == 0:
                 dx, dy = 1, 0
             else:
                 dx, dy = 0, 1
 
-            # Собираем клетки одной стены
             length = randrange(WALL_MIN_LENGTH, WALL_MAX_LENGTH + 1)
             wall = []
             for i in range(length):
@@ -148,7 +143,6 @@ class Walls(GameObject):  # Этот класс я генерировал с И�
                         ((y + dy * i) % GRID_HEIGHT) * GRID_SIZE)
                 wall.append(cell)
 
-            # Стена подходит, если ни одна её клетка не занята
             ok = True
             for cell in wall:
                 if cell in forbidden or cell in self.positions:
@@ -307,7 +301,6 @@ def eat_apple(snake, apple, walls, stubs):
 def main():
     """Инициализация PyGame:"""
     pygame.init()
-    # Тут нужно создать экземпляры классов.
     snake = Snake()
     walls = Walls()
     start = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
@@ -360,53 +353,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# Метод draw класса Apple
-# def draw(self):
-#     rect = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-#     pygame.draw.rect(screen, self.body_color, rect)
-#     pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
-
-# # Метод draw класса Snake
-# def draw(self):
-#     for position in self.positions[:-1]:
-#         rect = (pygame.Rect(position, (GRID_SIZE, GRID_SIZE)))
-#         pygame.draw.rect(screen, self.body_color, rect)
-#         pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
-
-#     # Отрисовка головы змейки
-#     head_rect = pygame.Rect(self.positions[0], (GRID_SIZE, GRID_SIZE))
-#     pygame.draw.rect(screen, self.body_color, head_rect)
-#     pygame.draw.rect(screen, BORDER_COLOR, head_rect, 1)
-
-#     # Затирание последнего сегмента
-#     if self.last:
-#         last_rect = pygame.Rect(self.last, (GRID_SIZE, GRID_SIZE))
-#         pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
-
-# Функция обработки действий пользователя
-# def handle_keys(game_object):
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             pygame.quit()
-#             raise SystemExit
-#         elif event.type == pygame.KEYDOWN:
-#             if event.key == pygame.K_UP and
-#  game_object.direction != DOWN:
-#                 game_object.next_direction = UP
-#             elif event.key == pygame.K_DOWN and
-# game_object.direction != UP:
-#                 game_object.next_direction = DOWN
-#             elif event.key == pygame.K_LEFT and
-# game_object.direction != RIGHT:
-#                 game_object.next_direction = LEFT
-#             elif event.key == pygame.K_RIGHT and
-# game_object.direction != LEFT:
-#                 game_object.next_direction = RIGHT
-
-# Метод обновления направления после нажатия на кнопку
-# def update_direction(self):
-#     if self.next_direction:
-#         self.direction = self.next_direction
-#         self.next_direction = None
