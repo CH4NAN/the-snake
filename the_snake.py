@@ -1,78 +1,88 @@
-from random import choice, randrange
+from random import randint, randrange
+from typing import Iterable, Optional
 
-import pygame
+import pygame as pg
+
+# Алиасы аннотаций:
+Pointer = tuple[int, int]
+Color = tuple[int, int, int]
 
 # Константы для размеров поля и сетки:
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
-GRID_SIZE = 20
-GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
-GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+SCREEN_WIDTH: int = 640
+SCREEN_HEIGHT: int = 480
+GRID_SIZE: int = 20
+GRID_WIDTH: int = SCREEN_WIDTH // GRID_SIZE
+GRID_HEIGHT: int = SCREEN_HEIGHT // GRID_SIZE
 
 # Направления движения:
-UP = (0, -1)
-DOWN = (0, 1)
-LEFT = (-1, 0)
-RIGHT = (1, 0)
-KEY_DIRECTIONS = {
-    pygame.K_UP: UP,
-    pygame.K_DOWN: DOWN,
-    pygame.K_LEFT: LEFT,
-    pygame.K_RIGHT: RIGHT,
+UP: Pointer = (0, -1)
+DOWN: Pointer = (0, 1)
+LEFT: Pointer = (-1, 0)
+RIGHT: Pointer = (1, 0)
+KEY_DIRECTIONS: dict[int, Pointer] = {
+    pg.K_UP: UP,
+    pg.K_DOWN: DOWN,
+    pg.K_LEFT: LEFT,
+    pg.K_RIGHT: RIGHT,
 }
-OPPOSITE = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT}
+OPPOSITE: dict[Pointer, Pointer] = {
+    UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT
+}
 
 # Параметры игрового поля:
-BOARD_BACKGROUND_COLOR = (100, 190, 240)
-SCORE_COLOR = (255, 100, 80)
+BOARD_BACKGROUND_COLOR: Color = (100, 190, 240)
+SCORE_COLOR: Color = (255, 100, 80)
 
 # Цвет яблока
-APPLE_COLOR = (240, 70, 70)
-APPLE_BORDER_COLOR = (170, 30, 40)
+APPLE_COLOR: Color = (240, 70, 70)
+APPLE_BORDER_COLOR: Color = (170, 30, 40)
 
 # Параметры змейки
-SNAKE_START_LENGTH = 3
-SNAKE_COLOR = (80, 200, 100)
-SNAKE_BORDER_COLOR = (30, 120, 50)
-SNAKE_END_RADIUS = 6
-SNAKE_BODY_RADIUS = 4
+SNAKE_START_LENGTH: int = 3
+SNAKE_COLOR: Color = (80, 200, 100)
+SNAKE_BORDER_COLOR: Color = (30, 120, 50)
+SNAKE_END_RADIUS: int = 6
+SNAKE_BODY_RADIUS: int = 4
 
 # Параметры огрызка:
-STUB_COLOR = (160, 90, 40)
-STUB_BORDER_COLOR = (100, 55, 20)
-STUB_STEP = 7
+STUB_COLOR: Color = (160, 90, 40)
+STUB_BORDER_COLOR: Color = (100, 55, 20)
+STUB_STEP: int = 5
 
 # Параметры стен:
-WALL_COLOR = (250, 220, 170)
-WALL_BORDER_COLOR = (215, 165, 90)
-WALL_COUNT = 12
-WALL_MIN_LENGTH = 3
-WALL_MAX_LENGTH = 6
+WALL_COLOR: Color = (250, 220, 170)
+WALL_BORDER_COLOR: Color = (215, 165, 90)
+WALL_COUNT: int = 12
+WALL_MIN_LENGTH: int = 3
+WALL_MAX_LENGTH: int = 6
 # Скорость движения змейки:
-SPEED = 10
+SPEED: int = 10
 
 # Переменные для подсчета очков:
-score = 0
-high_score = 0
+score: int = 0
+high_score: int = 0
 
 
 # Настройка игрового окна:
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+screen: pg.Surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 # Заголовок окна игрового поля:
-pygame.display.set_caption('Змейка')
+pg.display.set_caption('Змейка')
 
 # Настройка времени:
-clock = pygame.time.Clock()
+clock: pg.time.Clock = pg.time.Clock()
 
 
 class GameObject:
     """Базовый класс для всех игровых объектов."""
 
-    def __init__(self, position=None, body_color=None):
-        self.position = position or (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-        self.body_color = body_color
+    def __init__(self, position: Optional[Pointer] = None,
+                 body_color: Optional[Color] = None) -> None:
+        self.position: Pointer = position or (SCREEN_WIDTH // 2,
+                                              SCREEN_HEIGHT // 2)
+        self.body_color: Optional[Color] = body_color
 
-    def draw(self):
+    def draw(self) -> None:
         """Метод для отрисовки объекта на игровом поле."""
         raise NotImplementedError(
             'Метод draw() должен '
@@ -83,67 +93,73 @@ class GameObject:
 class Apple(GameObject):
     """Класс яблока. Содержит методы для управления яблоком и отрисовки."""
 
-    def __init__(self, apple_color=APPLE_COLOR,
-                 border_color=APPLE_BORDER_COLOR, occupied=()):
+    def __init__(self, apple_color: Color = APPLE_COLOR,
+                 border_color: Color = APPLE_BORDER_COLOR,
+                 occupied_positions: Iterable[Pointer] = ()) -> None:
         super().__init__(position=None, body_color=apple_color)
-        position = Apple.randomize_position(occupied)
-        self.position = position
-        self.border_color = border_color
+        self.randomize_position(occupied_positions)
+        self.border_color: Color = border_color
 
-    @staticmethod
-    def randomize_position(occupied=()):
-        """Возвращает случайную позицию, не занятую другими объектами."""
-        occupied = set(occupied)
-        free = [(x * GRID_SIZE, y * GRID_SIZE)
-                for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
-                if (x * GRID_SIZE, y * GRID_SIZE) not in occupied]
-        return choice(free)
+    def randomize_position(
+            self, occupied_positions: Iterable[Pointer] = ()) -> None:
+        """Устанавливает случайную позицию, не занятую другими объектами."""
+        occupied: set[Pointer] = set(occupied_positions)
+        while True:
+            new_position: Pointer = (
+                randint(0, GRID_WIDTH - 1) * GRID_SIZE,
+                randint(0, GRID_HEIGHT - 1) * GRID_SIZE
+            )
+            if new_position not in occupied:
+                self.position = new_position
+                break
 
-    def draw(self):
+    def draw(self) -> None:
         """Метод для отрисовки яблока на игровом поле."""
-        circle = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-        pygame.draw.circle(screen, self.body_color,
-                           circle.center, GRID_SIZE // 2)
-        pygame.draw.circle(screen, self.border_color,
-                           circle.center, GRID_SIZE // 2, 2)
+        circle: pg.Rect = pg.Rect(self.position, (GRID_SIZE, GRID_SIZE))
+        pg.draw.circle(screen, self.body_color,
+                       circle.center, GRID_SIZE // 2)
+        pg.draw.circle(screen, self.border_color,
+                       circle.center, GRID_SIZE // 2, 2)
 
 
 class Stub(Apple):
     """Класс огрызка. Наследуется от класса Apple."""
 
-    def __init__(self, stub_color=STUB_COLOR,
-                 stub_border_color=STUB_BORDER_COLOR, occupied=()):
+    def __init__(self, stub_color: Color = STUB_COLOR,
+                 stub_border_color: Color = STUB_BORDER_COLOR,
+                 occupied_positions: Iterable[Pointer] = ()) -> None:
         super().__init__(apple_color=stub_color,
-                         border_color=stub_border_color, occupied=occupied)
+                         border_color=stub_border_color,
+                         occupied_positions=occupied_positions)
 
 
 class Walls(GameObject):
     """Стены: класс для управления стенами и их отрисовки."""
 
-    def __init__(self, color=WALL_COLOR):
+    def __init__(self, color: Color = WALL_COLOR) -> None:
         super().__init__(body_color=color)
-        self.positions = []
+        self.positions: list[Pointer] = []
 
-    def generate(self, forbidden):
+    def generate(self, forbidden: Iterable[Pointer]) -> None:
         """Расставляет стены, не задевая запрещённые клетки."""
         self.positions = []
-        walls_made = 0
+        walls_made: int = 0
         while walls_made < WALL_COUNT:
-            x = randrange(GRID_WIDTH)
-            y = randrange(GRID_HEIGHT)
+            x: int = randrange(GRID_WIDTH)
+            y: int = randrange(GRID_HEIGHT)
             if randrange(2) == 0:
                 dx, dy = 1, 0
             else:
                 dx, dy = 0, 1
 
-            length = randrange(WALL_MIN_LENGTH, WALL_MAX_LENGTH + 1)
-            wall = []
+            length: int = randrange(WALL_MIN_LENGTH, WALL_MAX_LENGTH + 1)
+            wall: list[Pointer] = []
             for i in range(length):
-                cell = (((x + dx * i) % GRID_WIDTH) * GRID_SIZE,
-                        ((y + dy * i) % GRID_HEIGHT) * GRID_SIZE)
+                cell: Pointer = (((x + dx * i) % GRID_WIDTH) * GRID_SIZE,
+                                 ((y + dy * i) % GRID_HEIGHT) * GRID_SIZE)
                 wall.append(cell)
 
-            ok = True
+            ok: bool = True
             for cell in wall:
                 if cell in forbidden or cell in self.positions:
                     ok = False
@@ -151,31 +167,31 @@ class Walls(GameObject):
                 self.positions += wall
                 walls_made += 1
 
-    def draw(self):
+    def draw(self) -> None:
         """Отрисовывает стены."""
         for position in self.positions:
-            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
-            pygame.draw.rect(screen, self.body_color, rect)
-            pygame.draw.rect(screen, WALL_BORDER_COLOR, rect, 1)
+            rect: pg.Rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
+            pg.draw.rect(screen, self.body_color, rect)
+            pg.draw.rect(screen, WALL_BORDER_COLOR, rect, 1)
 
 
 class Snake(GameObject):
     """Класс змейки. Содержит методы для управления змейкой и отрисовки."""
 
-    def __init__(self, snake_color=SNAKE_COLOR):
+    def __init__(self, snake_color: Color = SNAKE_COLOR) -> None:
         super().__init__(position=None, body_color=snake_color)
         self.reset()
 
-    def get_head_position(self):
+    def get_head_position(self) -> Pointer:
         """Метод для получения позиции головы змейки."""
         return self.positions[0]
 
-    def move(self):
+    def move(self) -> bool:
         """Двигает змейку. Возвращает False, если она врезалась в себя."""
-        cur = self.get_head_position()
+        cur: Pointer = self.get_head_position()
         x, y = self.direction
-        new = (((cur[0] + (x * GRID_SIZE)) % SCREEN_WIDTH),
-               (cur[1] + (y * GRID_SIZE)) % SCREEN_HEIGHT)
+        new: Pointer = (((cur[0] + (x * GRID_SIZE)) % SCREEN_WIDTH),
+                        (cur[1] + (y * GRID_SIZE)) % SCREEN_HEIGHT)
 
         if new in self.positions[:-1]:
             return False
@@ -185,58 +201,62 @@ class Snake(GameObject):
             self.positions.pop()
         return True
 
-    def draw(self):
+    def draw(self) -> None:
         """Метод для отрисовки змейки на игровом поле."""
-        last_index = len(self.positions) - 1
+        last_index: int = len(self.positions) - 1
         for i, position in enumerate(self.positions):
-            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
+            rect: pg.Rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
             if last_index >= 1 and (i == 0 or i == last_index):
-                radius = SNAKE_END_RADIUS
+                radius: int = SNAKE_END_RADIUS
             else:
                 radius = SNAKE_BODY_RADIUS
-            pygame.draw.rect(screen, self.body_color, rect,
-                             border_radius=radius)
-            pygame.draw.rect(screen, SNAKE_BORDER_COLOR, rect, 1,
-                             border_radius=radius)
+            pg.draw.rect(screen, self.body_color, rect,
+                         border_radius=radius)
+            pg.draw.rect(screen, SNAKE_BORDER_COLOR, rect, 1,
+                         border_radius=radius)
 
-    def update_direction(self):
+    def update_direction(self) -> None:
         """Берёт следующее направление из очереди, если оно есть."""
         if self.direction_queue:
             self.direction = self.direction_queue.pop(0)
 
-    def reset(self):
+    def reset(self) -> None:
         """Метод для сброса змейки в начальное состояние."""
-        head = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-        self.positions = [(head[0] - i * GRID_SIZE, head[1])
-                          for i in range(SNAKE_START_LENGTH)]
-        self.direction = RIGHT
-        self.direction_queue = []
-        self.length = SNAKE_START_LENGTH
+        head: Pointer = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+        self.positions: list[Pointer] = [
+            (head[0] - i * GRID_SIZE, head[1])
+            for i in range(SNAKE_START_LENGTH)]
+        self.direction: Pointer = RIGHT
+        self.direction_queue: list[Pointer] = []
+        self.length: int = SNAKE_START_LENGTH
 
 
-def handle_keys(game_object):
+def handle_keys(game_object: Snake) -> None:
     """Функция обработки действий пользователя."""
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            pg.quit()
             raise SystemExit
-        if event.type != pygame.KEYDOWN or event.key not in KEY_DIRECTIONS:
+        if event.type != pg.KEYDOWN or event.key not in KEY_DIRECTIONS:
             continue
-        new = KEY_DIRECTIONS[event.key]
-        last = (game_object.direction_queue[-1]
-                if game_object.direction_queue else game_object.direction)
+        new: Pointer = KEY_DIRECTIONS[event.key]
+        last: Pointer = (game_object.direction_queue[-1]
+                         if game_object.direction_queue
+                         else game_object.direction)
         if new not in (last, OPPOSITE[last]) and len(
                 game_object.direction_queue) < 2:
             game_object.direction_queue.append(new)
 
 
-def occupied_cells(walls, snake, apple, stubs):
+def occupied_cells(walls: Walls, snake: Snake, apple: Apple,
+                   stubs: list[Stub]) -> list[Pointer]:
     """Возвращает все занятые клетки поля."""
     return (walls.positions + snake.positions + [apple.position]
             + [stub.position for stub in stubs])
 
 
-def reset_game(snake, apple, stubs, walls):
+def reset_game(snake: Snake, apple: Apple, stubs: list[Stub],
+               walls: Walls) -> None:
     """Сбрасывает змейку и заново расставляет яблоко и огрызки."""
     global score
     snake.reset()
@@ -246,26 +266,26 @@ def reset_game(snake, apple, stubs, walls):
     score = 0
 
 
-def respawn(obj, walls, snake, apple, stubs):
+def respawn(obj: Apple, walls: Walls, snake: Snake, apple: Apple,
+            stubs: list[Stub]) -> None:
     """Обновляет позицию объекта, избегая занятых ячеек."""
-    obj.position = obj.randomize_position(occupied_cells
-                                          (walls, snake, apple, stubs))
+    obj.randomize_position(occupied_cells(walls, snake, apple, stubs))
 
 
-def draw_score(score, high_score):
+def draw_score(score: int, high_score: int) -> None:
     """Отображает количество очков и рекорд."""
-    font = pygame.font.SysFont(
+    font: pg.font.Font = pg.font.SysFont(
         'trebuchetms', 32, bold=True
     )
 
-    score_text = font.render(
-        f'Scores: {score}',
+    score_text: pg.Surface = font.render(
+        f'Score: {score}',
         True,
         SCORE_COLOR
     )
 
-    high_score_text = font.render(
-        f'Record: {high_score}',
+    high_score_text: pg.Surface = font.render(
+        f'High Score: {high_score}',
         True,
         SCORE_COLOR
     )
@@ -281,13 +301,14 @@ def draw_score(score, high_score):
     )
 
 
-def eat_apple(snake, apple, walls, stubs):
+def eat_apple(snake: Snake, apple: Apple, walls: Walls,
+              stubs: list[Stub]) -> None:
     """Обрабатывает съедание яблока."""
     global score, high_score
 
     snake.length += 1
 
-    current_score = snake.length - SNAKE_START_LENGTH
+    current_score: int = snake.length - SNAKE_START_LENGTH
 
     if current_score > score:
         score = current_score
@@ -298,16 +319,18 @@ def eat_apple(snake, apple, walls, stubs):
     respawn(apple, walls, snake, apple, stubs)
 
 
-def main():
+def main() -> None:
     """Инициализация PyGame:"""
-    pygame.init()
-    snake = Snake()
-    walls = Walls()
-    start = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-    start_zone = [(start[0] + i * GRID_SIZE, start[1]) for i in range(-4, 6)]
+    pg.init()
+    snake: Snake = Snake()
+    walls: Walls = Walls()
+    start: Pointer = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+    start_zone: list[Pointer] = [
+        (start[0] + i * GRID_SIZE, start[1]) for i in range(-4, 6)]
     walls.generate(start_zone)
-    apple = Apple(occupied=walls.positions + snake.positions)
-    stubs = [Stub(occupied=occupied_cells(walls, snake, apple, []))]
+    apple: Apple = Apple(occupied_positions=walls.positions + snake.positions)
+    stubs: list[Stub] = [
+        Stub(occupied_positions=occupied_cells(walls, snake, apple, []))]
     global score, high_score
     score = 0
     high_score = 0
@@ -327,15 +350,16 @@ def main():
                     respawn(stub, walls, snake, apple, stubs)
                 break
 
-        target = 1 + (snake.length - SNAKE_START_LENGTH) // STUB_STEP
+        target: int = 1 + (snake.length - SNAKE_START_LENGTH) // STUB_STEP
         del stubs[max(target, 1):]
         while len(stubs) < target:
             stubs.append(Stub(
-                occupied=occupied_cells(walls, snake, apple, stubs)))
+                occupied_positions=occupied_cells(walls, snake, apple,
+                                                  stubs)))
 
         handle_keys(snake)
         snake.update_direction()
-        alive = snake.move()
+        alive: bool = snake.move()
 
         if not alive or snake.get_head_position() in walls.positions:
             reset_game(snake, apple, stubs, walls)
@@ -348,7 +372,7 @@ def main():
             stub.draw()
 
         draw_score(score, high_score)
-        pygame.display.update()
+        pg.display.update()
 
 
 if __name__ == '__main__':
